@@ -10,10 +10,11 @@
 #include "pluginterfaces/base/ustring.h"
 #include "vstgui/vstgui_uidescription.h"
 
-
 #include "vstgui/vstgui.h"
 #include "vstgui/vstgui_uidescription.h"
 #include "vstgui/uidescription/detail/uiviewcreatorattributes.h"
+
+#include <array>
 
 static const std::string kAttrHandleSize              = "handle-size"; //
 //                                                    UIViewCreator::kAttrHandleColor
@@ -110,7 +111,7 @@ public:
         const auto* attr = attributes.getAttributeValue (kAttrHandleGradientStyle);
         if (attr)
         {
-            if (*attr == styleStrings ()[CSliderHandle::kRadialGradient])
+            if (*attr == styleStrings() [CSliderHandle::kRadialGradient])
                 myView->setGradientStyleHandle (CSliderHandle::kRadialGradient);
             else
                 myView->setGradientStyleHandle (CSliderHandle::kLinearGradient);
