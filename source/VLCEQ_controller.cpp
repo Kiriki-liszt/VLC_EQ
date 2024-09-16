@@ -370,13 +370,14 @@ public:
     }
 private:
     using StyleStrings = std::array<string, 2>;
-    static StyleStrings& styleStrings ()
-    {
-        static StyleStrings strings = {"linear", "radial"};
-        return strings;
-    }
-
+    static StyleStrings& styleStrings ();
 };
+//------------------------------------------------------------------------
+auto SliderHandleCreator::styleStrings () -> StyleStrings&
+{
+    static StyleStrings strings = {"linear", "radial"};
+    return strings;
+}
 
 class SliderRoundCreator : public ViewCreatorAdapter
 {
