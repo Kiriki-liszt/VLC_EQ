@@ -13,6 +13,7 @@
 #include "vstgui/vstgui.h"
 #include "vstgui/vstgui_uidescription.h"
 #include "vstgui/uidescription/detail/uiviewcreatorattributes.h"
+#include "public.sdk/source/vst/utility/stringconvert.h"
 
 #include <array>
 
@@ -380,88 +381,8 @@ auto SliderHandleCreator::styleStrings () -> StyleStrings&
     return strings;
 }
 
-class SliderRoundCreator : public ViewCreatorAdapter
-{
-public:
-    // register this class with the view factory
-    SliderRoundCreator () { UIViewFactory::registerViewCreator (*this); }
-    
-    // return an unique name here
-    IdStringPtr getViewName () const { return "Slider with Round corner"; }
-
-    // return the name here from where your custom view inherites.
-    // Your view automatically supports the attributes from it.
-    IdStringPtr getBaseViewName () const { return UIViewCreator::kCSlider; }
-
-    // create your view here.
-    // Note you don't need to apply attributes here as the apply method will be called with this new view
-    CView* create (const UIAttributes& attributes, const IUIDescription* description) const
-    {
-        CRect size(CPoint(0, 0), CPoint(10, 10));
-        return new CSliderRound (size, nullptr, -1, 0, 0, nullptr, nullptr);
-    }
-
-    // apply custom attributes to your view
-    bool apply (CView* view, const UIAttributes& attributes, const IUIDescription* description) const
-    {
-        CSliderRound* myView = dynamic_cast<CSliderRound*> (view);
-        if (myView == 0)
-            return false;
-        
-        //int32_t value;
-        //if (attributes.getIntegerAttribute ("my-custom-attribute", value))
-        //    myView->setCustomAttribute (value);
-
-        double d;
-        if (attributes.getDoubleAttribute (UIViewCreator::kAttrRoundRectRadius, d))
-                myView->setRoundRectRadius (d);
-        
-        return true;
-    }
-
-    // add your custom attributes to the list
-    bool getAttributeNames (StringList& attributeNames) const
-    {
-        // attributeNames.emplace_back ("my-custom-attribute");
-        attributeNames.emplace_back (UIViewCreator::kAttrRoundRectRadius);
-        return true;
-    }
-    
-    // return the type of your custom attributes
-    AttrType getAttributeType (const std::string& attributeName) const
-    {
-        //if (attributeName == "my-custom-attribute")
-        //    return kIntegerType;
-        if (attributeName == UIViewCreator::kAttrRoundRectRadius)
-            return kFloatType;
-        return kUnknownType;
-    }
-    
-    // return the string value of the custom attributes of the view
-    bool getAttributeValue (CView* view, const string& attributeName, string& stringValue, const IUIDescription* desc) const
-    {
-        CSliderRound* myView = dynamic_cast<CSliderRound*> (view);
-        if (myView == 0)
-            return false;
-        
-        //if (attributeName == "my-custom-attribute")
-        //{
-        //    stringValue = UIAttributes::integerToString (myView->getCustomAttribute ());
-        //    return true;
-        //}
-        
-        if (attributeName == UIViewCreator::kAttrRoundRectRadius)
-        {
-            stringValue = UIAttributes::doubleToString (myView->getRoundRectRadius ());
-            return true;
-        }
-        return false;
-    }
-};
-
 // create a static instance so that it registers itself with the view factory
 SliderHandleCreator __gSliderHandleCreator;
-SliderRoundCreator  __gSliderRoundCreator;
 }
 
 namespace yg331 {
@@ -480,13 +401,8 @@ tresult PLUGIN_API VLC_EQ_Controller::initialize (FUnknown* context)
         return result;
     }
     
-    Vst::UnitInfo uinfo;
-    uinfo.id            = Vst::kRootUnitId;
-    uinfo.parentUnitId  = Vst::kNoParentUnitId;
-    uinfo.programListId = kParamFactoryPreset;
-    UString name (uinfo.name, 128);
-    name.fromAscii ("Root");
-    addUnit (new Vst::Unit (uinfo));
+    // create top root unit with kProgramId as id for the programList
+    addUnit (new Vst::Unit (STR ("Root"), Vst::kRootUnitId, Vst::kNoParentUnitId, kParamFactoryPreset));
     
     // Here you could register some parameters
     int32 stepCount;
@@ -503,11 +419,33 @@ tresult PLUGIN_API VLC_EQ_Controller::initialize (FUnknown* context)
     flags        = Vst::ParameterInfo::kIsBypass | Vst::ParameterInfo::kCanAutomate;
     parameters.addParameter(STR16("Bypass"), nullptr, stepCount, defaultVal, flags, tag);
     
+    /*
     tag          = kParamFactoryPreset;
-    flags        = Vst::ParameterInfo::kCanAutomate | Vst::ParameterInfo::kIsList | Vst::ParameterInfo::kIsProgramChange;
+    flags        = Vst::ParameterInfo::kIsList | Vst::ParameterInfo::kIsProgramChange;
     auto* paramFactoryPreset = new Vst::StringListParameter(STR16("Factory Presets"), tag, nullptr, flags);
     for (int i = 0; i < NB_PRESETS; i++) paramFactoryPreset->appendString ( USTRING(preset_list[i]) );
     parameters.addParameter (paramFactoryPreset);
+    */
+    
+    // create the program list: here kNumProgs entries
+    auto* prgList = new Steinberg::Vst::ProgramList (STR16 ("Factory Presets"), kParamFactoryPreset, Vst::kRootUnitId);
+    addProgramList (prgList);
+    for (int32 i = 0; i < NB_PRESETS; i++)
+    {
+        // std::u16string title = STR ("Prog ");
+        // title += VST3::toString (i + 1);
+        // prgList->addProgram (title.data ());
+        prgList->addProgram (USTRING(preset_list[i]));
+    }
+
+    //---Program Change parameter---
+    Steinberg::Vst::Parameter* prgParam = prgList->getParameter ();
+
+    // by default this program change parameter if automatable we can overwrite this:
+    prgParam->getInfo ().flags &= ~Steinberg::Vst::ParameterInfo::kCanAutomate;
+
+    parameters.addParameter (prgParam);
+    
     
     tag          = kParamEnable;
     auto* paramEnable = new Vst::StringListParameter(STR16("Enable"), tag);
@@ -618,13 +556,13 @@ tresult PLUGIN_API VLC_EQ_Controller::setComponentState (IBStream* state)
     ParamValue savedGain_Global = Plain2Norm(12.0,  minGain,  maxGain);
     ParamValue savedGain_Band[EQZ_BANDS_MAX] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
     
-    if (streamer.readInt32(savedBypass)        == false) return kResultFalse;
+    if (streamer.readInt32(savedBypass)         == false) return kResultFalse;
     // if (streamer.readDouble(savedZoom)          == false) savedZoom          = 2.0 / 6.0;
-    // if (streamer.readInt32(savedOS)            == false) savedOS            = 1;
-    if (streamer.readInt32(savedFactoryPreset) == false) return kResultFalse;
-    if (streamer.readInt32(savedEnable)        == false) return kResultFalse;
-    if (streamer.readInt32(saved2Pass)         == false) return kResultFalse;
-    if (streamer.readInt32(savedFreqTable)     == false) return kResultFalse;
+    // if (streamer.readInt32(savedOS)             == false) savedOS            = 1;
+    if (streamer.readInt32(savedFactoryPreset)  == false) return kResultFalse;
+    if (streamer.readInt32(savedEnable)         == false) return kResultFalse;
+    if (streamer.readInt32(saved2Pass)          == false) return kResultFalse;
+    if (streamer.readInt32(savedFreqTable)      == false) return kResultFalse;
     if (streamer.readDouble(savedGain_Global)   == false) return kResultFalse;
     if (streamer.readDouble(savedGain_Band[0])  == false) return kResultFalse;
     if (streamer.readDouble(savedGain_Band[1])  == false) return kResultFalse;
@@ -637,14 +575,14 @@ tresult PLUGIN_API VLC_EQ_Controller::setComponentState (IBStream* state)
     if (streamer.readDouble(savedGain_Band[8])  == false) return kResultFalse;
     if (streamer.readDouble(savedGain_Band[9])  == false) return kResultFalse;
 
-    setParamNormalized(kParamBypass,     savedBypass ? 1 : 0);
+    setParamNormalized(kParamBypass,      savedBypass ? 1 : 0);
     // setParamNormalized(kParamZoom,       savedZoom);
     // setParamNormalized(kParamOS,         ListPlain2Norm(static_cast<ParamValue>(savedOS), overSample_num, ParamValue));
-    setParamNormalized(kParamFactoryPreset, ListPlain2Norm(savedFactoryPreset, NB_PRESETS - 1, ParamValue));
-    setParamNormalized(kParamEnable,     savedEnable ? 1 : 0);
-    setParamNormalized(kParam2Pass,      saved2Pass ? 1 : 0);
-    setParamNormalized(kParamFreqTable,     savedFreqTable ? 1 : 0);
-    setParamNormalized(kParamGain_Global,    savedGain_Global);
+    EditControllerEx1::setParamNormalized(kParamFactoryPreset, ListPlain2Norm(savedFactoryPreset, NB_PRESETS - 1, ParamValue));
+    setParamNormalized(kParamEnable,      savedEnable ? 1 : 0);
+    setParamNormalized(kParam2Pass,       saved2Pass ? 1 : 0);
+    setParamNormalized(kParamFreqTable,   savedFreqTable ? 1 : 0);
+    setParamNormalized(kParamGain_Global, savedGain_Global);
     setParamNormalized(kParamGain_Band1,  savedGain_Band[0]);
     setParamNormalized(kParamGain_Band2,  savedGain_Band[1]);
     setParamNormalized(kParamGain_Band3,  savedGain_Band[2]);
@@ -654,7 +592,7 @@ tresult PLUGIN_API VLC_EQ_Controller::setComponentState (IBStream* state)
     setParamNormalized(kParamGain_Band7,  savedGain_Band[6]);
     setParamNormalized(kParamGain_Band8,  savedGain_Band[7]);
     setParamNormalized(kParamGain_Band9,  savedGain_Band[8]);
-    setParamNormalized(kParamGain_Band10,  savedGain_Band[9]);
+    setParamNormalized(kParamGain_Band10, savedGain_Band[9]);
     return kResultOk;
 }
 
@@ -734,8 +672,8 @@ tresult PLUGIN_API VLC_EQ_Controller::setParamNormalized (Vst::ParamID tag, Vst:
             ParamValue norm_gb = getParameterObject(kParamGain_Band1 + band)->toNormalized(eqz_preset_10b[program].f_amp[band]);
             EditControllerEx1::setParamNormalized (kParamGain_Band1 + band, norm_gb);
         }
-        //if(getComponentHandler())
-        //    getComponentHandler()->restartComponent(Vst::kParamValuesChanged);
+        // if (componentHandler) componentHandler->restartComponent (Steinberg::Vst::kParamValuesChanged);
+        // setDirty(true);
     }
     return result;
 }

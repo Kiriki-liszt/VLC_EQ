@@ -52,23 +52,23 @@ public:
         setWantsIdle(true);
     };
     
-    const CPoint& getSizeHandle            () const { return sizeHandle; }
-    void    setSizeHandle            (const CPoint& size) { if (size != sizeHandle) { sizeHandle = size; setDirty (); } }
+    const CPoint& getSizeHandle       () const { return sizeHandle; }
+    void    setSizeHandle             (const CPoint& size) { if (size != sizeHandle) { sizeHandle = size; setDirty (); } }
     
-    CCoord  getRoundRectRadiusHandle () const { return roundRectRadiusHandle; }
-    void    setRoundRectRadiusHandle (CCoord radius) { if (radius != roundRectRadiusHandle) { roundRectRadiusHandle = radius; setDirty (); } }
+    CCoord  getRoundRectRadiusHandle  () const { return roundRectRadiusHandle; }
+    void    setRoundRectRadiusHandle  (CCoord radius) { if (radius != roundRectRadiusHandle) { roundRectRadiusHandle = radius; setDirty (); } }
     
-    CCoord  getFrameWidthHandle      () const { return widthHandleFrame; }
-    void    setFrameWidthHandle      (CCoord width) { if (width != widthHandleFrame) { widthHandleFrame = width; setDirty (); } }
+    CCoord  getFrameWidthHandle       () const { return widthHandleFrame; }
+    void    setFrameWidthHandle       (CCoord width) { if (width != widthHandleFrame) { widthHandleFrame = width; setDirty (); } }
     
-    const CColor& getColorHandle           () const { return colorHandle; }
-    void    setColorHandle           (const CColor& color) { if (color != colorHandle) { colorHandle = color; setDirty (); } }
+    const CColor& getColorHandle      () const { return colorHandle; }
+    void    setColorHandle            (const CColor& color) { if (color != colorHandle) { colorHandle = color; setDirty (); } }
     
-    const CColor& getColorHandleFrame      () const { return colorHandleFrame; }
-    void    setColorHandleFrame      (const CColor& color) { if (color != colorHandleFrame) { colorHandleFrame = color; setDirty (); } }
+    const CColor& getColorHandleFrame () const { return colorHandleFrame; }
+    void    setColorHandleFrame       (const CColor& color) { if (color != colorHandleFrame) { colorHandleFrame = color; setDirty (); } }
 
-    const CColor& getColorHandleMark       () const { return colorHandleMark; }
-    void    setColorHandleMark       (const CColor& color) { if (color != colorHandleMark) { colorHandleMark = color; setDirty (); } }
+    const CColor& getColorHandleMark  () const { return colorHandleMark; }
+    void    setColorHandleMark        (const CColor& color) { if (color != colorHandleMark) { colorHandleMark = color; setDirty (); } }
     
     void setDrawGradientHandle  (bool state)           { if (drawGradientHandle  != state) { drawGradientHandle  = state; setDirty (); } }
     void setGradientStyleHandle (GradientStyle style)  { if (gradientStyleHandle != style) { gradientStyleHandle = style; setDirty (); } }
@@ -265,258 +265,6 @@ protected:
     double                   gradientAngleHandleShadow {0.};
     CCoord                   radialRadiusHandleShadow {1.};
     CPoint                   radialCenterHandleShadow {0.5, 0.5};
-};
-
-
-
-
-class CSliderRound : public CSlider
-{
-public:
-    CSliderRound (const CRect& size,
-                   IControlListener* listener,
-                   int32_t  tag,
-                   int32_t  iMinPos,
-                   int32_t  iMaxPos,
-                   CBitmap* handle,
-                   CBitmap* background,
-                   const CPoint& offset = CPoint (0, 0),
-                   const int32_t style  = kLeft | kVertical)
-    : CSlider(size, listener, tag, iMinPos, iMaxPos, handle, background, offset, style)
-    {
-        setWantsIdle(true);
-    };
-    
-    CSliderRound (const CRect& rect,
-                   IControlListener* listener,
-                   int32_t  tag,
-                   const CPoint& offsetHandle,
-                   int32_t  rangeHandle,
-                   CBitmap* handle,
-                   CBitmap* background,
-                   const CPoint& offset = CPoint (0, 0),
-                   const int32_t style  = kLeft | kVertical)
-    : CSlider(rect, listener, tag, offsetHandle, rangeHandle, handle, background, offset, style)
-    {
-        setWantsIdle(true);
-    };
-    
-    CSliderRound (const CSlider& slider)
-    : CSlider(slider)
-    {
-        setWantsIdle(true);
-    };
-    
-    CCoord getRoundRectRadius () const { return roundRectRadius; }
-    void setRoundRectRadius (CCoord radius)
-    {
-        if (radius != roundRectRadius)
-        {
-            roundRectRadius = radius;
-            setDirty ();
-        }
-    };
-    
-
-    // overrides
-    void onIdle() override {
-        invalid();
-    };
-    void draw (CDrawContext* pContext) override
-    {
-        CDrawContext* drawContext = pContext;
-
-        // draw background
-        if (getDrawBackground ())
-        {
-            CRect rect (0, 0, getControlSizePrivate ().x, getControlSizePrivate ().y);
-            rect.offset (getViewSize ().left, getViewSize ().top);
-            getDrawBackground ()->draw (drawContext, rect, getBackgroundOffset ());
-        }
-
-        if (getDrawStyle() != 0)
-        {
-            auto lineWidth = getFrameWidth ();
-            if (lineWidth < 0.)
-                lineWidth = pContext->getHairlineSize ();
-            CRect r (getViewSize ());
-            pContext->setDrawMode (kAntiAliasing);
-            pContext->setLineStyle (kLineSolid);
-            pContext->setLineWidth (lineWidth);
-            if (getDrawStyle() & kDrawFrame || getDrawStyle() & kDrawBack)
-            {
-                pContext->setFrameColor (getFrameColor());
-                pContext->setFillColor (getBackColor());
-                auto path = owned (pContext->createGraphicsPath ());
-                if (path)
-                {
-                    if (getDrawStyle() & kDrawFrame)
-                        r.inset (lineWidth / 2., lineWidth / 2.);
-                    path->addRoundRect (r, getRoundRectRadius());
-                    if (getDrawStyle() & kDrawBack)
-                        pContext->drawGraphicsPath (path, CDrawContext::kPathFilled);
-                    if (getDrawStyle() & kDrawFrame)
-                        pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
-                }
-                else
-                {
-                    CDrawStyle d = kDrawFilled;
-                    if (getDrawStyle() & kDrawFrame && getDrawStyle() & kDrawBack)
-                        d = kDrawFilledAndStroked;
-                    else if (getDrawStyle() & kDrawFrame)
-                        d = kDrawStroked;
-                    pContext->drawRect (r, d);
-                }
-            }
-            if (getDrawStyle() & kDrawValue)
-            {
-                pContext->setDrawMode (kAliasing);
-                if (getDrawStyle() & kDrawFrame)
-                    r.inset (lineWidth / 2., lineWidth / 2.);
-                CCoord full_left = r.left;
-                CCoord full_right = r.right;
-                CCoord full_top = r.top;
-                CCoord full_bottom = r.bottom;
-                float drawValue = getValueNormalized ();
-                if (getDrawStyle() & kDrawValueFromCenter)
-                {
-                    if (getDrawStyle() & kDrawInverted)
-                        drawValue = 1.f - drawValue;
-                    if (getStyle () & kHorizontal)
-                    {
-                        CCoord width = r.getWidth ();
-                        r.right = r.left + r.getWidth () * drawValue;
-                        r.left += width / 2.;
-                        r.normalize ();
-                    }
-                    else
-                    {
-                        CCoord height = r.getHeight ();
-                        r.bottom = r.top + r.getHeight () * drawValue;
-                        r.top += height / 2.;
-                        r.normalize ();
-                    }
-                }
-                else
-                {
-                    if (getStyle () & kHorizontal)
-                    {
-                        if (getDrawStyle() & kDrawInverted)
-                            r.left = r.right - r.getWidth () * drawValue;
-                        else
-                            r.right = r.left + r.getWidth () * drawValue;
-                    }
-                    else
-                    {
-                        if (getDrawStyle() & kDrawInverted)
-                            r.bottom = r.top + r.getHeight () * drawValue;
-                        else
-                            r.top = r.bottom - r.getHeight () * drawValue;
-                    }
-                }
-                r.normalize ();
-                if (r.getWidth () >= 0.5 && r.getHeight () >= 0.5)
-                {
-                    pContext->setFillColor (getValueColor());
-                    auto path = owned (pContext->createGraphicsPath ());
-                    if (path)
-                    {
-                        //path->addRoundRect (r, getRoundRectRadius());
-                        if(true)
-                        {
-                            CCoord radius = getRoundRectRadius();
-                            auto size = r;
-                            if (radius <= 0.)
-                            {
-                                path->addRect (size);
-                                return;
-                            }
-                            CRect rect2 (size);
-                            rect2.normalize ();
-                            const CCoord left = rect2.left;
-                            const CCoord right = rect2.right;
-                            const CCoord top = rect2.top;
-                            const CCoord bottom = rect2.bottom;
-                            
-                            path->beginSubpath (CPoint (right - radius, top));
-                            if (getDrawStyle() & kDrawValueFromCenter)
-                            {
-                                if (getStyle () & kHorizontal)
-                                {
-                                    path->addArc (CRect (right - 2.0 * radius, top, right, top + 2.0 * radius), 270., 360., true); // right-top
-                                    path->addArc (CRect (right - 2.0 * radius, bottom - 2.0 * radius, right, bottom), 0., 90., true); // right-bottom
-                                    path->addArc (CRect (left, bottom - 2.0 * radius, left + 2.0 * radius, bottom), 90., 180., true); // left-bottom
-                                    path->addArc (CRect (left, top, left + 2.0 * radius, top + 2.0 * radius), 180., 270., true); // left-top
-                                }
-                                else
-                                {
-                                    path->addArc (CRect (right - 2.0 * radius, top, right, top + 2.0 * radius), 270., 360., true); // right-top
-                                    path->addArc (CRect (right - 2.0 * radius, bottom - 2.0 * radius, right, bottom), 0., 90., true); // right-bottom
-                                    path->addArc (CRect (left, bottom - 2.0 * radius, left + 2.0 * radius, bottom), 90., 180., true); // left-bottom
-                                    path->addArc (CRect (left, top, left + 2.0 * radius, top + 2.0 * radius), 180., 270., true); // left-top
-                                }
-                            }
-                            else
-                            {
-                                if (getStyle () & kHorizontal)
-                                {
-                                    path->addArc (CRect (right - 2.0 * radius, top, right, top + 2.0 * radius), 270., 360., true); // right-top
-                                    path->addArc (CRect (right - 2.0 * radius, bottom - 2.0 * radius, right, bottom), 0., 90., true); // right-bottom
-                                    path->addArc (CRect (left, bottom - 2.0 * radius, left + 2.0 * radius, bottom), 90., 180., true); // left-bottom
-                                    path->addArc (CRect (left, top, left + 2.0 * radius, top + 2.0 * radius), 180., 270., true); // left-top
-                                }
-                                else
-                                {
-                                    CCoord r_t_f = (radius - (top - full_top));
-                                    CCoord dx_top = (radius > (top - full_top)) ? radius - sqrt((radius*radius) - (r_t_f*r_t_f)): 0.0;
-                                    double theta_top = (radius > (top - full_top)) ? asin(r_t_f/radius) * 180.0 * M_1_PI : 0.0;
-
-                                    CCoord r_b_t = (radius - (bottom - top));
-                                    CCoord dx_bottom = (radius > (bottom - top)) ? radius - sqrt((radius*radius) - (r_b_t*r_b_t)): 0.0;
-                                    double theta_bottom = (radius > (bottom - top)) ? asin(r_b_t/radius) * 180.0 * M_1_PI : 0.0;
-                                    
-                                    if (dx_top > 0.0)
-                                    {
-                                        path->addLine(right - dx_top, top);
-                                        path->addArc (CRect (full_right - 2.0 * radius, full_top, full_right, full_top + 2.0 * radius), 360.0 - theta_top, 360.0, true); // right-top
-                                    }
-                                    else path->addLine(right - dx_bottom, top);
-                                    path->addArc (CRect (right - 2.0 * radius, bottom - 2.0 * radius, right, bottom), 0.0 + theta_bottom, 90., true); // right-bottom
-                                    path->addArc (CRect (left, bottom - 2.0 * radius, left + 2.0 * radius, bottom), 90., 180.0 - theta_bottom, true); // left-bottom
-                                    if (dx_top) 
-                                    {
-                                        path->addArc (CRect (full_left, full_top, full_left + 2.0 * radius, full_top + 2.0 * radius), 180.0, 180.0 + theta_top, true); // left-top
-                                        path->addLine(left  + dx_top, top);
-                                    }
-                                    else path->addLine(left  + dx_bottom, top);
-                                }
-                            }
-                            path->closeSubpath ();
-                        }
-                        pContext->drawGraphicsPath (path, CDrawContext::kPathFilled);
-                    }
-                    else
-                        pContext->drawRect (r, kDrawFilled);
-                }
-            }
-        }
-        if (getHandle())
-        {
-            // calc new coords of slider
-            CRect rectNew = calculateHandleRect (getValueNormalized ());
-
-            // draw slider at new position
-            getHandle()->draw (drawContext, rectNew);
-        }
-
-        setDirty (false);
-    };
-
-protected:
-    ~CSliderRound() noexcept override
-    {};
-    
-    CCoord roundRectRadius {5.};
 };
 }
 
