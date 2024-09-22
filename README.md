@@ -3,7 +3,6 @@
 Port of VLC EQ, a graphic EQ with musically selected bands
 
 Runs in double precision 64-bit internal processing. Also double precision input / output if supported.  
-Has a fixed 10ms lookahead and latency.  
 
 [![GitHub Release](https://img.shields.io/github/v/release/kiriki-liszt/VLC_EQ?style=flat-square&label=Get%20latest%20Release)](https://github.com/Kiriki-liszt/VLC_EQ/releases/latest)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/kiriki-liszt/VLC_EQ/total?style=flat-square&label=total%20downloads&color=blue)](https://tooomm.github.io/github-release-stats/?username=Kiriki-liszt&repository=VLC_EQ)  
